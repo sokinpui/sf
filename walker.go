@@ -10,12 +10,14 @@ type Engine struct {
 	matcher     *Matcher
 	concurrency chan struct{}
 	wg          sync.WaitGroup
+	fileType    string
 }
 
-func NewEngine(root string, maxConcurrency int) *Engine {
+func NewEngine(root string, maxConcurrency int, fileType string) *Engine {
 	return &Engine{
 		matcher:     NewMatcher(root),
 		concurrency: make(chan struct{}, maxConcurrency),
+		fileType:    fileType,
 	}
 }
 
@@ -44,7 +46,9 @@ func (e *Engine) walkDir(path string, results chan<- string) {
 			continue
 		}
 
-		results <- fullPath
+		if e.isTypeMatch(entry) {
+			results <- fullPath
+		}
 
 		if entry.IsDir() {
 			e.spawnWorker(fullPath, results)
@@ -63,4 +67,18 @@ func (e *Engine) spawnWorker(path string, results chan<- string) {
 	default:
 		e.walkDir(path, results)
 	}
+}
+
+func (e *Engine) isTypeMatch(entry os.DirEntry) bool {
+	if e.fileType == "" {
+		return true
+	}
+
+	switch e.fileType {
+	case "file":
+		return !entry.IsDir()
+	case "dir":
+		return entry.IsDir()
+	}
+	return false
 }

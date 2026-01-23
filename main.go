@@ -4,21 +4,37 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+
+	"github.com/spf13/cobra"
 )
 
 func main() {
-	root := "."
-	if len(os.Args) > 1 {
-		root = os.Args[1]
+	var fileType string
+
+	rootCmd := &cobra.Command{
+		Use:   "gf [path]",
+		Short: "A fast directory walker",
+		Args:  cobra.MaximumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			root := "."
+			if len(args) > 0 {
+				root = args[0]
+			}
+
+			engine := NewEngine(root, runtime.NumCPU()*2, fileType)
+			results := make(chan string, 100)
+
+			go engine.Walk(root, results)
+
+			for path := range results {
+				fmt.Println(path)
+			}
+		},
 	}
 
-	// Use CPU count * 2 for optimal I/O throughput
-	engine := NewEngine(root, runtime.NumCPU()*2)
-	results := make(chan string, 100)
+	rootCmd.Flags().StringVarP(&fileType, "type", "t", "", "Filter by type: file, dir")
 
-	go engine.Walk(root, results)
-
-	for path := range results {
-		fmt.Println(path)
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
 	}
 }

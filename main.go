@@ -14,17 +14,17 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "gf [path]",
 		Short: "A fast directory walker",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			root := "."
-			if len(args) > 0 {
-				root = args[0]
+			roots := args
+			if len(roots) == 0 {
+				roots = []string{"."}
 			}
 
-			engine := NewEngine(root, runtime.NumCPU()*2, fileType)
+			engine := NewEngine(runtime.NumCPU()*2, fileType)
 			results := make(chan string, 100)
 
-			go engine.Walk(root, results)
+			go engine.Walk(roots, results)
 
 			for path := range results {
 				fmt.Println(path)

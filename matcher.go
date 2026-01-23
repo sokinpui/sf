@@ -13,9 +13,14 @@ type Matcher struct {
 }
 
 func NewMatcher(root string) *Matcher {
-	ignorePath := filepath.Join(root, ".gitignore")
+	baseDir := root
+	if info, err := os.Stat(root); err == nil && !info.IsDir() {
+		baseDir = filepath.Dir(root)
+	}
 
-	gitIgnore, _ := gitignore.NewGitIgnore(ignorePath, root)
+	ignorePath := filepath.Join(baseDir, ".gitignore")
+
+	gitIgnore, _ := gitignore.NewGitIgnore(ignorePath, baseDir)
 
 	return &Matcher{
 		gitIgnore: gitIgnore,

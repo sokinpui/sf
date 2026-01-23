@@ -7,23 +7,38 @@ import (
 )
 
 type Engine struct {
-	matcher     *Matcher
 	concurrency chan struct{}
 	wg          sync.WaitGroup
 	fileType    string
 }
 
-func NewEngine(root string, maxConcurrency int, fileType string) *Engine {
+func NewEngine(maxConcurrency int, fileType string) *Engine {
 	return &Engine{
-		matcher:     NewMatcher(root),
 		concurrency: make(chan struct{}, maxConcurrency),
 		fileType:    fileType,
 	}
 }
 
-func (e *Engine) Walk(root string, results chan<- string) {
-	e.wg.Add(1)
-	go e.walkDir(root, results)
+func (e *Engine) Walk(roots []string, results chan<- string) {
+	for _, root := range roots {
+		matcher := NewMatcher(root)
+		e.wg.Add(1)
+
+		go func(r string, m *Matcher) {
+			defer e.wg.Done()
+
+			info, err := os.Lstat(r)
+			if err != nil {
+				return
+			}
+
+			if info.IsDir() {
+				e.spawnWorker(r, results, m)
+			} else if e.isTypeMatch(info.IsDir()) {
+				results <- r
+			}
+		}(root, matcher)
+	}
 
 	go func() {
 		e.wg.Wait()
@@ -31,7 +46,7 @@ func (e *Engine) Walk(root string, results chan<- string) {
 	}()
 }
 
-func (e *Engine) walkDir(path string, results chan<- string) {
+func (e *Engine) walkDir(path string, results chan<- string, matcher *Matcher) {
 	defer e.wg.Done()
 
 	entries, err := os.ReadDir(path)
@@ -42,43 +57,43 @@ func (e *Engine) walkDir(path string, results chan<- string) {
 	for _, entry := range entries {
 		fullPath := filepath.Join(path, entry.Name())
 
-		if e.matcher.ShouldSkip(fullPath, entry) {
+		if matcher.ShouldSkip(fullPath, entry) {
 			continue
 		}
 
-		if e.isTypeMatch(entry) {
+		if e.isTypeMatch(entry.IsDir()) {
 			results <- fullPath
 		}
 
 		if entry.IsDir() {
-			e.spawnWorker(fullPath, results)
+			e.spawnWorker(fullPath, results, matcher)
 		}
 	}
 }
 
-func (e *Engine) spawnWorker(path string, results chan<- string) {
+func (e *Engine) spawnWorker(path string, results chan<- string, matcher *Matcher) {
 	e.wg.Add(1)
 	select {
 	case e.concurrency <- struct{}{}:
 		go func() {
-			e.walkDir(path, results)
+			e.walkDir(path, results, matcher)
 			<-e.concurrency
 		}()
 	default:
-		e.walkDir(path, results)
+		e.walkDir(path, results, matcher)
 	}
 }
 
-func (e *Engine) isTypeMatch(entry os.DirEntry) bool {
+func (e *Engine) isTypeMatch(isDir bool) bool {
 	if e.fileType == "" {
 		return true
 	}
 
 	switch e.fileType {
 	case "file":
-		return !entry.IsDir()
+		return !isDir
 	case "dir":
-		return entry.IsDir()
+		return isDir
 	}
 	return false
 }

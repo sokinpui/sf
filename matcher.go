@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,9 +10,9 @@ import (
 )
 
 type Matcher struct {
-	gitIgnore gitignore.IgnoreMatcher
-	excludes  []string
-	root      string
+	ignoreMatchers []gitignore.IgnoreMatcher
+	excludes       []string
+	root           string
 }
 
 func NewMatcher(root string, excludes []string) *Matcher {
@@ -22,13 +23,21 @@ func NewMatcher(root string, excludes []string) *Matcher {
 
 	ignorePath := filepath.Join(baseDir, ".gitignore")
 
-	gitIgnore, _ := gitignore.NewGitIgnore(ignorePath, baseDir)
-
-	return &Matcher{
-		gitIgnore: gitIgnore,
-		excludes:  excludes,
-		root:      root,
+	m := &Matcher{
+		excludes: excludes,
+		root:     root,
 	}
+
+	if globalPath := getGlobalGitIgnorePath(); globalPath != "" {
+		if gi, err := gitignore.NewGitIgnore(globalPath, baseDir); err == nil {
+			m.ignoreMatchers = append(m.ignoreMatchers, gi)
+		}
+	}
+
+	gi, _ := gitignore.NewGitIgnore(ignorePath, baseDir)
+	m.ignoreMatchers = append(m.ignoreMatchers, gi)
+
+	return m
 }
 
 func (m *Matcher) ShouldSkip(path string, info os.DirEntry) bool {
@@ -40,8 +49,10 @@ func (m *Matcher) ShouldSkip(path string, info os.DirEntry) bool {
 		return true
 	}
 
-	if m.gitIgnore != nil && m.gitIgnore.Match(path, info.IsDir()) {
-		return true
+	for _, matcher := range m.ignoreMatchers {
+		if matcher != nil && matcher.Match(path, info.IsDir()) {
+			return true
+		}
 	}
 
 	if m.matchExcludes(path, info) {
@@ -80,4 +91,59 @@ func (m *Matcher) isHidden(name string) bool {
 
 func (m *Matcher) isGitDir(info os.DirEntry) bool {
 	return info.IsDir() && info.Name() == ".git"
+}
+
+func getGlobalGitIgnorePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	if path := parseGitConfigForExcludes(filepath.Join(home, ".gitconfig")); path != "" {
+		return expandHome(path, home)
+	}
+
+	xdgPath := filepath.Join(home, ".config", "git", "ignore")
+	if _, err := os.Stat(xdgPath); err == nil {
+		return xdgPath
+	}
+
+	return ""
+}
+
+func parseGitConfigForExcludes(configPath string) string {
+	file, err := os.Open(configPath)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	inCoreSection := false
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
+			continue
+		}
+
+		if strings.HasPrefix(line, "[") {
+			inCoreSection = strings.Contains(line, "[core]")
+			continue
+		}
+
+		if inCoreSection && strings.Contains(line, "excludesfile") {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	return ""
+}
+
+func expandHome(path, home string) string {
+	if strings.HasPrefix(path, "~/") {
+		return filepath.Join(home, path[2:])
+	}
+	return path
 }

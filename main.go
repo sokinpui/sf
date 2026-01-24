@@ -13,7 +13,7 @@ func main() {
 	var excludes []string
 
 	rootCmd := &cobra.Command{
-		Use:   "gf [path]",
+		Use:   "sf [path]",
 		Short: "A fast directory walker",
 		Args:  cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {

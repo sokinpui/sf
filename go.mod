@@ -1,4 +1,4 @@
-module github.com/soknpui/sf
+module github.com/sokinpui/sf
 
 go 1.25.5
 

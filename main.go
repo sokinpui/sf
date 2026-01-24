@@ -11,6 +11,7 @@ import (
 func main() {
 	var fileType string
 	var excludes []string
+	var showHidden bool
 
 	rootCmd := &cobra.Command{
 		Use:   "sf [path]",
@@ -22,7 +23,7 @@ func main() {
 				roots = []string{"."}
 			}
 
-			engine := NewEngine(runtime.NumCPU()*2, fileType, excludes)
+			engine := NewEngine(runtime.NumCPU()*2, fileType, excludes, showHidden)
 			results := make(chan string, 100)
 
 			go engine.Walk(roots, results)
@@ -35,6 +36,7 @@ func main() {
 
 	rootCmd.Flags().StringVarP(&fileType, "type", "t", "", "Filter by type: file, dir")
 	rootCmd.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Exclude entries that match the given glob pattern")
+	rootCmd.Flags().BoolVarP(&showHidden, "hidden", "H", false, "Search hidden files and directories")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

@@ -13,9 +13,10 @@ type Matcher struct {
 	ignoreMatchers []gitignore.IgnoreMatcher
 	excludes       []string
 	root           string
+	showHidden     bool
 }
 
-func NewMatcher(root string, excludes []string) *Matcher {
+func NewMatcher(root string, excludes []string, showHidden bool) *Matcher {
 	baseDir := root
 	if info, err := os.Stat(root); err == nil && !info.IsDir() {
 		baseDir = filepath.Dir(root)
@@ -24,8 +25,9 @@ func NewMatcher(root string, excludes []string) *Matcher {
 	ignorePath := filepath.Join(baseDir, ".gitignore")
 
 	m := &Matcher{
-		excludes: excludes,
-		root:     root,
+		excludes:   excludes,
+		root:       root,
+		showHidden: showHidden,
 	}
 
 	if globalPath := getGlobalGitIgnorePath(); globalPath != "" {
@@ -41,7 +43,7 @@ func NewMatcher(root string, excludes []string) *Matcher {
 }
 
 func (m *Matcher) ShouldSkip(path string, info os.DirEntry) bool {
-	if m.isHidden(info.Name()) {
+	if !m.showHidden && m.isHidden(info.Name()) {
 		return true
 	}
 

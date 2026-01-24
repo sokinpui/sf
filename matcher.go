@@ -10,9 +10,11 @@ import (
 
 type Matcher struct {
 	gitIgnore gitignore.IgnoreMatcher
+	excludes  []string
+	root      string
 }
 
-func NewMatcher(root string) *Matcher {
+func NewMatcher(root string, excludes []string) *Matcher {
 	baseDir := root
 	if info, err := os.Stat(root); err == nil && !info.IsDir() {
 		baseDir = filepath.Dir(root)
@@ -24,6 +26,8 @@ func NewMatcher(root string) *Matcher {
 
 	return &Matcher{
 		gitIgnore: gitIgnore,
+		excludes:  excludes,
+		root:      root,
 	}
 }
 
@@ -38,6 +42,33 @@ func (m *Matcher) ShouldSkip(path string, info os.DirEntry) bool {
 
 	if m.gitIgnore != nil && m.gitIgnore.Match(path, info.IsDir()) {
 		return true
+	}
+
+	if m.matchExcludes(path, info) {
+		return true
+	}
+
+	return false
+}
+
+func (m *Matcher) matchExcludes(path string, info os.DirEntry) bool {
+	if len(m.excludes) == 0 {
+		return false
+	}
+
+	rel, err := filepath.Rel(m.root, path)
+	if err != nil {
+		rel = path
+	}
+
+	for _, pattern := range m.excludes {
+		if matched, _ := filepath.Match(pattern, rel); matched {
+			return true
+		}
+
+		if matched, _ := filepath.Match(pattern, info.Name()); matched {
+			return true
+		}
 	}
 
 	return false

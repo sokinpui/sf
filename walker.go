@@ -10,18 +10,20 @@ type Engine struct {
 	concurrency chan struct{}
 	wg          sync.WaitGroup
 	fileType    string
+	excludes    []string
 }
 
-func NewEngine(maxConcurrency int, fileType string) *Engine {
+func NewEngine(maxConcurrency int, fileType string, excludes []string) *Engine {
 	return &Engine{
 		concurrency: make(chan struct{}, maxConcurrency),
 		fileType:    fileType,
+		excludes:    excludes,
 	}
 }
 
 func (e *Engine) Walk(roots []string, results chan<- string) {
 	for _, root := range roots {
-		matcher := NewMatcher(root)
+		matcher := NewMatcher(root, e.excludes)
 		e.wg.Add(1)
 
 		go func(r string, m *Matcher) {

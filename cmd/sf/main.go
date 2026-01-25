@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/sokinpui/sf"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ func main() {
 				roots = []string{"."}
 			}
 
-			engine := NewEngine(runtime.NumCPU()*2, fileType, excludes, showHidden)
+			engine := sf.NewEngine(runtime.NumCPU()*2, fileType, excludes, showHidden)
 			results := make(chan string, 100)
 
 			go engine.Walk(roots, results)

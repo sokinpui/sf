@@ -1,6 +1,9 @@
 package sf
 
-import "runtime"
+import (
+	"runtime"
+	"sort"
+)
 
 func Run(roots []string, fileType string, excludes []string, showHidden bool) []string {
 	if len(roots) == 0 {
@@ -16,6 +19,8 @@ func Run(roots []string, fileType string, excludes []string, showHidden bool) []
 	for path := range resultsChan {
 		paths = append(paths, path)
 	}
+
+	sort.Strings(paths)
 
 	return paths
 }

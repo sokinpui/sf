@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/sokinpui/sf"
 	"github.com/spf13/cobra"
@@ -19,17 +18,9 @@ func main() {
 		Short: "A fast directory walker",
 		Args:  cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			roots := args
-			if len(roots) == 0 {
-				roots = []string{"."}
-			}
+			results := sf.Run(args, fileType, excludes, showHidden)
 
-			engine := sf.NewEngine(runtime.NumCPU()*2, fileType, excludes, showHidden)
-			results := make(chan string, 100)
-
-			go engine.Walk(roots, results)
-
-			for path := range results {
+			for _, path := range results {
 				fmt.Println(path)
 			}
 		},

@@ -69,21 +69,35 @@ func (m *Matcher) matchExcludes(path string, info os.DirEntry) bool {
 		return false
 	}
 
-	rel, err := filepath.Rel(m.root, path)
-	if err != nil {
-		rel = path
-	}
+	rel := m.getRelativePath(path)
+	name := info.Name()
 
 	for _, pattern := range m.excludes {
+		pattern = filepath.ToSlash(pattern)
+
+		if matched, _ := filepath.Match(pattern, name); matched {
+			return true
+		}
+
 		if matched, _ := filepath.Match(pattern, rel); matched {
 			return true
 		}
 
-		if matched, _ := filepath.Match(pattern, info.Name()); matched {
+		if strings.Contains(pattern, "/") && m.matchSegments(rel, pattern) {
 			return true
 		}
 	}
+	return false
+}
 
+func (m *Matcher) matchSegments(rel, pattern string) bool {
+	segments := strings.Split(rel, "/")
+	for i := 1; i < len(segments); i++ {
+		subPath := strings.Join(segments[i:], "/")
+		if matched, _ := filepath.Match(pattern, subPath); matched {
+			return true
+		}
+	}
 	return false
 }
 
@@ -93,6 +107,14 @@ func (m *Matcher) isHidden(name string) bool {
 
 func (m *Matcher) isGitDir(info os.DirEntry) bool {
 	return info.IsDir() && info.Name() == ".git"
+}
+
+func (m *Matcher) getRelativePath(path string) string {
+	rel, err := filepath.Rel(m.root, path)
+	if err != nil {
+		return filepath.ToSlash(path)
+	}
+	return filepath.ToSlash(rel)
 }
 
 func getGlobalGitIgnorePath() string {

@@ -16,7 +16,7 @@ sf [path] [flags]
 
 ### Flags
 - `-t, --type <file|dir>`: Filter results by type.
-- `-e, --exclude <pattern>`: Exclude entries matching the glob pattern (can be used multiple times).
+- `-E, --exclude <pattern>`: Exclude entries matching the glob pattern (can be used multiple times).
 - `-H, --hidden`: Include hidden files and directories in the search.
 - `-h, --help`: Help for sf.
 
@@ -34,7 +34,7 @@ sf /path/to/search -t dir
 
 Exclude specific patterns:
 ```bash
-sf . -e "*.log" -e "node_modules/*"
+sf . -E "*.log" -E "node_modules/*"
 ```
 
 Show hidden files:

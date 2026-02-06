@@ -27,7 +27,7 @@ func main() {
 	}
 
 	rootCmd.Flags().StringVarP(&fileType, "type", "t", "", "Filter by type: file, dir")
-	rootCmd.Flags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Exclude entries that match the given glob pattern")
+	rootCmd.Flags().StringSliceVarP(&excludes, "exclude", "E", []string{}, "Exclude entries that match the given glob pattern")
 	rootCmd.Flags().BoolVarP(&showHidden, "hidden", "H", false, "Search hidden files and directories")
 
 	if err := rootCmd.Execute(); err != nil {

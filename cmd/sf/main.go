@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/sokinpui/sf"
 	"github.com/spf13/cobra"
@@ -14,9 +15,10 @@ func main() {
 	var showHidden bool
 
 	rootCmd := &cobra.Command{
-		Use:   "sf [path]",
-		Short: "A fast directory walker",
-		Args:  cobra.ArbitraryArgs,
+		Use:     "sf [path]",
+		Short:   "A fast directory walker",
+		Version: getVersion(),
+		Args:    cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			results := sf.Run(args, fileType, excludes, showHidden)
 
@@ -33,4 +35,17 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func getVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+
+	if info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+
+	return "devel"
 }

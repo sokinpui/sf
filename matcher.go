@@ -123,8 +123,15 @@ func getGlobalGitIgnorePath() string {
 		return ""
 	}
 
-	if path := parseGitConfigForExcludes(filepath.Join(home, ".gitconfig")); path != "" {
-		return expandHome(path, home)
+	gitConfigPaths := []string{
+		filepath.Join(home, ".gitconfig"),
+		filepath.Join(home, ".config", "git", "config"),
+	}
+
+	for _, p := range gitConfigPaths {
+		if path := parseGitConfigForExcludes(p); path != "" {
+			return expandHome(path, home)
+		}
 	}
 
 	xdgPath := filepath.Join(home, ".config", "git", "ignore")
